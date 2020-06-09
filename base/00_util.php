@@ -1,0 +1,180 @@
+<?php
+/**
+ * Copyright 2020 by Benjamin Petry (www.bpetry.de).
+ * This software is provided on an "AS IS" BASIS,
+ * without warranties or conditions of any kind, either express or implied.
+ */
+
+/**
+ * Checks if a version matches an expected version string.
+ *
+ * @param expectedVersionString can be '>=0.53', '>0.53', '=0.53', etc.
+ * @param currentVersion the current version, e.g. '0.53'
+ *
+ * @return true, if the version matches the expected version string, otherwise false
+ */
+function checkVersion($expectedVersionString, $currentVersion)
+{
+    $expVerMatches = array();
+    $matchResult = preg_match("/^([><]?[=]?)([0-9]+\.?[0-9]*)$/s", $expectedVersionString, $expVerMatches);
+    if (!$matchResult) {
+        throw new RuntimeException("Illegal expected-version-string: '".$expectedVersionString."'");
+    }
+    $comp = $expVerMatches[1];
+    $expVersion = floatval($expVerMatches[2]);
+    $isVersion = floatval($currentVersion);
+    return (($comp == ">=" && $isVersion >= $expVersion) ||
+      ($comp == ">" && $isVersion > $expVersion) ||
+      ($comp == "=" && $isVersion == $expVersion) ||
+      ($comp == "" && $isVersion == $expVersion) ||
+      ($comp == "<=" && $isVersion <= $expVersion) ||
+      ($comp == "<" && $isVersion < $expVersion));
+}
+
+/**
+ * Removes a start and/or ending slash (e.g. for urls or paths).
+ *
+ * @param   url the url to trim the slash
+ * @param   pos can be SLASH_STARTING, SLASH_ENDING, SLASH_BOTH
+ */
+function removeSlash($url, $pos=SLASH_ENDING)
+{
+    if (!$url || $url == "") {
+        return $url;
+    }
+    $url = str_replace("\\", "/", $url);
+    if (($pos & SLASH_STARTING) && substr($url, 0, 1) == "/") {
+        $url = substr($url, 1);
+    }
+    if (($pos & SLASH_ENDING) && $url != "" && substr($url, -1) == "/") {
+        $url = substr($url, 0, -1);
+    }
+    return $url;
+}
+
+
+/**
+ * Copyright 2020 by Benjamin Petry (www.bpetry.de).
+ * This software is provided on an "AS IS" BASIS,
+ * without warranties or conditions of any kind, either express or implied.
+ */
+
+function bigintval($value)
+{
+    $value = trim($value);
+    $negative = substr($value, 0, 1)=="-";
+    $multiply = $negative ? -1 : 1;
+    $value = $negative ? substr($value, 1) : $value;
+    if (ctype_digit($value)) {
+        return $value * $multiply;
+    }
+    $value = preg_replace("/[^0-9](.*)$/", '', $value);
+    if (ctype_digit($value)) {
+        return $value * $multiply;
+    }
+    return 0;
+}
+
+/**
+ * Encodes an object as utf_8
+ */
+function encode_utf8($object)
+{
+    if (is_string($object)) {
+        return utf8_encode($object);
+    } elseif (is_array($object)) {
+        foreach ($object as $key => $value) {
+            $object[$key] = encode_utf8($value);
+        }
+    }
+    return $object;
+}
+
+// Origin: https://base64.guru/developers/php/examples/base64url
+function base64url_encode($data)
+{
+    $b64 = base64_encode($data);
+    // Convert Base64 to Base64URL by replacing “+” with “-” and “/” with “_”
+    // Remove padding character from the end of line and return the Base64URL result
+    return $b64 === false ? false : rtrim(strtr($b64, '+/', '-_'), '=');
+}
+
+function base64url_decode($data)
+{
+    // Convert Base64URL to Base64 by replacing “-” with “+” and “_” with “/”
+    return base64_decode(strtr($data, '-_', '+/'), true);
+}
+
+// returns a random string with a length of 128
+function randomHashString()
+{
+    $tmpSalt = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    $salt = "";
+    for ($n = 0; $n < 128; $n++) {
+        $rnd = rand(0, strlen($tmpSalt)-1);
+        $salt .= substr($tmpSalt, $rnd, 1);
+    }
+    return hash('sha512', $salt);
+}
+
+/**
+ * Creates a unique file name in the $outputDir based on $baseFilename with the extension $extension.
+ * If $extension is null, then the extension of baseFilename is being used.
+ * If the filename already exists a counting variable is added, separated with $sep.
+ */
+function getUniqueFileName($outputDir, $baseFilename, $extension=null, $sep="-")
+{
+    if (is_null($extension)) {
+        $info =pathinfo($outputDir.$baseFilename);
+        $extension =  ".".$info['extension'];
+        $baseFilename = $info['filename'];
+    }
+    $counter = 0;
+    $result = $baseFilename.$extension;
+    while (file_exists($outputDir.$result)) {
+        $counter++;
+        $result = $baseFilename.$sep.$counter.$extension;
+    }
+    return $result;
+}
+
+/**
+ * Formats a seconds in the form of hh:mm:ss.sss (depending on the given parameters).
+ */
+function formatSeconds($seconds, $hh = true, $mm = true, $ss = true, $sss = true)
+{
+    $tmp = $seconds;
+    $hhValue = floor($tmp / 3600);
+    $tmp = $tmp - $hhValue * 3600;
+    $mmValue = floor($tmp / 60);
+    $tmp = $tmp - $mmValue * 60;
+    $ssValue = floor($tmp);
+    $sssValue = round(($tmp - $ssValue) * 1000);
+
+    $result = $hh ? str_pad($hhValue, 2, "0", STR_PAD_LEFT) : "";
+    $result .= $hh && ($mm || $ss) ? ":" : "";
+    $result .= $mm ? str_pad($mmValue, 2, "0", STR_PAD_LEFT) : "";
+    $result .= $mm && $ss ? ":" : "";
+    $result .= $ss ? str_pad($ssValue, 2, "0", STR_PAD_LEFT) : "";
+    $result .= ($hh || $mm || $ss) && $sss ? "." : "";
+    $result .= $sss ? str_pad($sssValue, 3, "0", STR_PAD_RIGHT) : "";
+    return $result;
+}
+
+/**
+ * Parses time of hh:mm:ss.sss.
+ * Result will be provided in seconds.
+ */
+function parseTime($time)
+{
+    $regex = "/((([0-9]?[0-9]):)?([0-9]?[0-9]):)?([0-9]?[0-9])(\.([0-9][0-9]?[0-9]?))?/s";
+    if (!preg_match($regex, $time, $matches)) {
+        return null;
+    }
+    $hh = intval($matches[3] ? $matches[3] : "0");
+    $mm = intval($matches[4] ? $matches[4] :  "0");
+    $ss = intval($matches[5] ? $matches[5] : "0");
+    $sss = intval($matches[7] ? str_pad($matches[7], 3, "0", STR_PAD_RIGHT) : "000");
+    $timeSeconds = $hh * 3600 + $mm * 60 + $ss + $sss / 1000.0;
+    return $timeSeconds;
+}
