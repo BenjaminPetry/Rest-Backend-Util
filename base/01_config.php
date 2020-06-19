@@ -54,8 +54,8 @@ $tmpServername = filter_input(INPUT_SERVER, 'SERVER_NAME', FILTER_SANITIZE_URL);
 
 define("IS_PRODUCTION", $is_production);
 define("IS_LOCALHOST", $tmpServername == "localhost" || $tmpHost=="127.0.0.1" || $tmpHost=="localhost" || $config[CF_FORCE_RUN_LOCAL]);
-define('VERBOSE', $config[CF_VERBOSE]);
-define('TEST', $config[CF_TEST]);
+define('VERBOSE', isset($_SERVER["HTTP_VERBOSE"]) ? $_SERVER["HTTP_VERBOSE"] === "true" : $config[CF_VERBOSE]);
+define('TEST', isset($_SERVER["HTTP_TEST"]) ? $_SERVER["HTTP_TEST"] === "true" : $config[CF_TEST]);
 define("SECRET", $config[CF_SECRET]);
 
 define("PATH_CACHE", $config[CF_PATH_CACHE]);

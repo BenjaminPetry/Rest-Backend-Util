@@ -178,3 +178,25 @@ function parseTime($time)
     $timeSeconds = $hh * 3600 + $mm * 60 + $ss + $sss / 1000.0;
     return $timeSeconds;
 }
+
+/**
+ * Parses a directory with a regular expression and return the absolute paths
+ */
+function parseDir($folder, $matching_expr)
+{
+    $tmp = array();
+    if ($handle = opendir($folder)) {
+        while (false !== ($entry = readdir($handle))) {
+            if (substr($entry, 0, 1) != ".") {
+                $matches = array();
+                if (preg_match_all($matching_expr, $entry, $matches)) {
+                    $tmp[] = array("file"=> $entry,
+                                  "path"=> $folder."/".$entry,
+                                  "folder"=>$folder);
+                }
+            }
+        }
+        closedir($handle);
+    }
+    return $tmp;
+}

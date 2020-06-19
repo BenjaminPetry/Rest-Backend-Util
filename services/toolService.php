@@ -25,6 +25,7 @@ class ToolService
     {
         return array(
           "status"=>"running",
+          "mode"=>(TEST) ? "test" : "normal",
           "version"=>defined("META_VERSION") ? META_VERSION : "NA",
           "copyright"=>defined("META_COPYRIGHT") ? META_COPYRIGHT : "NA",
           "util-version"=>defined("META_UTIL_VERSION") ? META_UTIL_VERSION : "NA",

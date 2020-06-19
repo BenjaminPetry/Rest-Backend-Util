@@ -13,6 +13,7 @@ This project is a PHP framework for my (Benjamin Petry) personal projects' backe
 
 ```txt
 backend           # the current working directory (also as \$cwd)
+|-> cache         # the directory for caches
 |-> log           # the log directory (must be writable by the program)
 |-> services      # for all the services to implement
 |-> util          # this project as a submodule
@@ -81,6 +82,8 @@ $config["auth-microservices-permissions"] = array(
   "http://localhost/example/v1" => array("permission1","permission2")
 }; // this array describes the specific permissions of a microservice (use @auth microservice-[permission] in your methods)
 ```
+<sup>v0.61</sup>
+**Note**: Setting the HTTP headers `"HTTP_TEST" = true` and `"HTTP_VERBOSE" = true` will override the setting of `CF_TEST` and `CF_VERBOSE`, respectively.
 
 ### Directories and Files
 
