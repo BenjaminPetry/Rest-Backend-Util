@@ -88,8 +88,9 @@ class Response // Methods to generate a normalized JSON outcome
 
     private static function header()
     {
+        global $config;
         $currentOrigin = !empty($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
-        $allowedOrigins = in_array($currentOrigin, CONFIG_CORS_ACCEPT_ORIGINS) ? array($currentOrigin) : CONFIG_CORS_ACCEPT_ORIGINS;
+        $allowedOrigins = in_array($currentOrigin, $config[CF_CORS_ACCEPT_ORIGINS]) ? array($currentOrigin) : $config[CF_CORS_ACCEPT_ORIGINS];
         foreach ($allowedOrigins as $origin) { // to support multiple origins
             header("Access-Control-Allow-Origin: $origin");
         }

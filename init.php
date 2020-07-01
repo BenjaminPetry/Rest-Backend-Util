@@ -24,6 +24,12 @@ if (defined("EXPECTED_BACKEND_UTIL_VERSION") && !checkVersion(EXPECTED_BACKEND_U
     throw new RuntimeException("Wrong version of the backend-util framework detected. The backend-util framework version is ".META_UTIL_VERSION." but your application expects a version ".EXPECTED_BACKEND_UTIL_VERSION.". Maybe pulling the submodule of the backend-util framework solves this issue. Otherwise change the expected version of your application to: define(\"EXPECTED_BACKEND_UTIL_VERSION\", >=".META_UTIL_VERSION.");");
 }
 
+if (DISPLAY_ERRORS) {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+}
+
 Log::debug("-------------------- START --------------------");
 
 // Init the database

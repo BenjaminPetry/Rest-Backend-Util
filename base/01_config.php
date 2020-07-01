@@ -56,6 +56,7 @@ define("IS_PRODUCTION", $is_production);
 define("IS_LOCALHOST", $tmpServername == "localhost" || $tmpHost=="127.0.0.1" || $tmpHost=="localhost" || $config[CF_FORCE_RUN_LOCAL]);
 define('VERBOSE', isset($_SERVER["HTTP_VERBOSE"]) ? $_SERVER["HTTP_VERBOSE"] === "true" : $config[CF_VERBOSE]);
 define('TEST', isset($_SERVER["HTTP_TEST"]) ? $_SERVER["HTTP_TEST"] === "true" : $config[CF_TEST]);
+define("DISPLAY_ERRORS", $config[CF_ERRORS_DISPLAY]);
 define("SECRET", $config[CF_SECRET]);
 
 define("PATH_CACHE", $config[CF_PATH_CACHE]);
@@ -66,7 +67,6 @@ $tmpDatabaseConfigName = (TEST) ? CF_DB_CONFIG_TEST : CF_DB_CONFIG_DEFAULT;
 define("DATABASE_CONFIG", array_key_exists($tmpDatabaseConfigName, $config[CF_DB])? $tmpDatabaseConfigName : null);
 
 define("CONFIG_NAME", $config[CF_NAME]);
-define("CONFIG_CORS_ACCEPT_ORIGINS", $config[CF_CORS_ACCEPT_ORIGINS]);
 define("CONFIG_EMAIL_DEFAULT_SENDER", $config[CF_EMAIL_DEFAULT_SENDER]);
 define("CONFIG_EMAIL_LOG_RECEIVER", $config[CF_EMAIL_LOG_RECEIVER]);
 

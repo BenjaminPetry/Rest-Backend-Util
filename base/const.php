@@ -33,6 +33,7 @@ define("AUTH_ROLE_SELF", "self"); // requires a logged in user and provides the 
 define("CF_VERBOSE", "verbose");
 define("CF_TEST", "test");
 define("CF_FORCE_RUN_LOCAL", "run-local");
+define("CF_ERRORS_DISPLAY", "display-errors");
 
 define("CF_NAME", "name");
 define("CF_CORS_ACCEPT_ORIGINS", "cors-accept-origins");
