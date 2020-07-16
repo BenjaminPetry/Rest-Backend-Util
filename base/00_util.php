@@ -200,3 +200,30 @@ function parseDir($folder, $matching_expr)
     }
     return $tmp;
 }
+
+
+/**
+ * Iterates recursively through an array and applies a map function on each item.
+ *
+ * @param arr The array to iterate through
+ * @param map_fun the map function to apply on each array item
+ * @param params additional parameters for the map function
+ *
+ * @return arr the modified array
+ *
+ * @see https://gist.github.com/vdvm/4665450
+ */
+function array_map_rec($arr, $map_fun, $params)
+{
+    if (!is_array($arr)) {
+        return $map_fun($arr, $params);
+    }
+
+    $newArray = array();
+
+    foreach ($arr as $key => $value) {
+        $newArray[$key] = array_map_rec($value, $map_fun, $params);
+    }
+
+    return $newArray;
+}
