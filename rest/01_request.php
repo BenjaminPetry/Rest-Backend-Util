@@ -38,7 +38,7 @@ class Request
         self::$url = $path = preg_replace('/\?.*$/', '', $_SERVER['REQUEST_URI']); // remove the query
         self::$url = preg_replace('/^' . preg_quote(self::$rootUrl, '/') . '/', '', self::$url); // remove the root url
         self::$url = removeSlash(self::$url, 3); // remove starting and ending slash
-        $formats = isset($_GET['format']) ? $_GET['format'] : isset($_SERVER['HTTP_FORMAT']) ? $_SERVER['HTTP_FORMAT'] : isset($_SERVER["HTTP_ACCEPT"]) ? preg_replace('/\s+/i', '', $_SERVER['HTTP_ACCEPT']) : null;
+        $formats = isset($_GET['format']) ? $_GET['format'] : (isset($_SERVER['HTTP_FORMAT']) ? $_SERVER['HTTP_FORMAT'] : (isset($_SERVER["HTTP_ACCEPT"]) ? preg_replace('/\s+/i', '', $_SERVER['HTTP_ACCEPT']) : null));
         $authorization_header = isset($_SERVER["HTTP_AUTHORIZATION"]) ? $_SERVER["HTTP_AUTHORIZATION"] : "";
         self::$accessToken = ($authorization_header != "" && strtoLower(substr($authorization_header, 0, 7)) == "bearer ") ? substr($authorization_header, 7) : "";
         self::$currentSession = null;
