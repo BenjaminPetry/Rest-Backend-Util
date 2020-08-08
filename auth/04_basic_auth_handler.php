@@ -14,7 +14,7 @@ class BasicAuthHandler
     public function getCurrentSession($accessToken)
     {
         $currentSession = TokenManager::verifyAccessToken($accessToken);
-        TokenManager::verifySessionInformation($currentSession);
+        TokenManager::checkAccessTokenRevokeState($currentSession);
         return $currentSession;
     }
 

@@ -32,6 +32,19 @@ function checkVersion($expectedVersionString, $currentVersion)
 }
 
 /**
+ * Checks if a string starts with a another string (query)
+ *
+ * @param str string to check if it starts with query
+ * @param query the string to check against
+ *
+ * @return result true if $str starts with $query.
+ */
+function startsWith($str, $query)
+{
+    return substr($str, 0, strlen($query)) === $query;
+}
+
+/**
  * Removes a start and/or ending slash (e.g. for urls or paths).
  *
  * @param   url the url to trim the slash
@@ -226,4 +239,40 @@ function array_map_rec($arr, $map_fun, $params)
     }
 
     return $newArray;
+}
+
+
+/**
+ * Generates a random string that does not occur in a database table's field.
+ *
+ * @param prepared_query the query to check for duplicates. The query's result needs to have a field `count` and an argument ':value' to set the current value.
+ * @param random_string_length the length of the unique string (must be smaller than 128)
+ *
+ * @return random_string checked random string
+ */
+function uniqueEntry($prepared_query, $random_string_length)
+{
+    $random_string = "";
+    do {
+        $random_string = substr(randomHashString(), 0, $random_string_length);
+        $result = DB::execute($prepared_query, array("value"=>$random_string));
+    } while (intval($result["count"]) > 0);
+    return $random_string;
+}
+
+/**
+ * Combines values of an associative array into a URL-query (including ?)
+ *
+ * @param params the associative array, e.g. array("email" => "test@here.de","value"=> "abc")
+ *
+ * @return query combined URL-query, e.g. '?email=test@here.de&value=abc'
+ */
+function createUrlQuery($params)
+{
+    $query = "";
+    foreach ($params as $key => $value) {
+        $query .= ($query == "") ? "?" : "&";
+        $query .= $key."=".strval($value);
+    }
+    return $query;
 }

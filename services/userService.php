@@ -97,10 +97,10 @@ class UserService
      * @url GET me/
      * @url GET users/$user
      */
-    public function get($user, $throw404=true)
+    public static function get($user, $throw404=true, $forceEmail=false)
     {
         return BaseService::get(
-            "SELECT ID, username, email, created_at, is_admin, user_state FROM users WHERE ".self::userWhere($user)." ORDER BY username DESC;",
+            "SELECT ID, username, email, created_at, is_admin, user_state FROM users WHERE ".self::userWhere($user, $forceEmail)." ORDER BY username DESC;",
             array("user"=>$user),
             $throw404,
             "user",
@@ -148,12 +148,12 @@ class UserService
     /**
      * Checking the password of a user
      *
-     * @param   user      id of the user (must be numeric) otherwise it will be treated as username
+     * @param   user      id of the user (must be numeric) otherwise it will be treated as username or, if specified, as email
      * @param   password  the password of the user
      */
-    public static function checkPassword($user, $password)
+    public static function checkPassword($user, $password, $userIsEmail=false)
     {
-        $user = BaseService::get("SELECT `password` FROM users WHERE ".self::userWhere($user)." LIMIT 1;", array("user"=>$user));
+        $user = BaseService::get("SELECT `password` FROM users WHERE ".self::userWhere($user, $userIsEmail)." LIMIT 1;", array("user"=>$user));
         $checkPassword = $user["password"];
         $sha_password = substr($checkPassword, 0, 128);
         $sha_salt = substr($checkPassword, 128);
@@ -170,9 +170,9 @@ class UserService
     }
 
 
-    private static function userWhere($user)
+    private static function userWhere($user, $forceEmail=false)
     {
-        return preg_match("/^[0-9]+?$/", $user) ? "id=:user" : "username=:user";
+        return $forceEmail ? "email=:user" : (preg_match("/^[0-9]+?$/", $user) ? "id=:user" : "username=:user");
     }
 
     /**

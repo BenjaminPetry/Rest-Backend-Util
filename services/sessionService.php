@@ -7,6 +7,7 @@
 
 require_once("baseService.php");
 require_once("userService.php");
+require_once("accessTokenService.php");
 
 /**
  * Provides login functionality
@@ -15,62 +16,208 @@ require_once("userService.php");
  */
 class SessionService
 {
+
     /**
-     * Log in and get access token
+     * Creates session for a corresponding user password has to be checked allready
      *
-     * @auth none
-     * @url POST /sessions username=$username,password=$password,audience=$audience?,nonce=$nonce,session_name=$session_name?
+     * @see AuthService
+     *
+     * @param user the user ID or the complete user info retrieved using UserService::get()
+     * @param session_name name of the session (optional)
+     *
+     * @return result true, if the creation of the session was successful
      */
-    public static function create($username, $password, $nonce, $audience=null, $session_name="Unnamed Session")
+    public static function create($user, $session_name="Unnamed Session")
     {
         if (AUTH_MODE != AUTH_SERVER) {
             throw new RuntimeException("Illegal session configuration. This backend has no session login functionality.");
         }
-        if (!UserService::checkPassword($username, $password)) {
-            throw new RestException(401, "Invalid password");
-        }
-        $audience = (is_null($audience)) ? Request::$apiUrl : $audience;
-        $userInfo = UserService::get($username);
+        $userInfo = is_array($user) ? $user : UserService::get($user);
 
         // Check for existing sessions and delete those if present
-        $currentSession = self::getCurrent(false);
-        if ($currentSession) {
-            self::delete($currentSession["guid"]);
-        }
         $currentLocalSession = self::getLocalSession();
         if ($currentLocalSession) {
-            self::setLocalSession(null);
-            self::delete($currentSession["guid"]);
+            self::delete($currentLocalSession["guid"]);
         }
         
         // check if audience is valid
-        $guid = self::guidv4();
-        $tokenId = substr(randomHashString(), 0, 64);
-        self::createMS($guid, $userInfo["ID"], $session_name, $tokenId);
-        $result = self::informClients(MicroService::POST, "ms/sessions/", array("guid"=>$guid,"user_id"=>$userInfo["ID"],"session_name"=>"Test","token_id"=>$tokenId));
+        $guid = self::createGuid();
+
+        $data = array("user"=>$userInfo["ID"],"guid"=>$guid,"name"=>$session_name);
+        $session_id = BaseService::create("INSERT INTO `sessions` (user, `guid`, `session_name`,`expires_at`) VALUES (:user, :guid, :name, DATE_ADD(NOW(), INTERVAL 14 DAY) )", $data);
+        if (!$session_id) {
+            Log::error("Could not create session: ".print_r($data, true));
+            return false;
+        }
 
         // Store guid in cookie
         self::setLocalSession($guid, $userInfo["ID"], $userInfo["username"]);
-        Response::setStatus(200);
-        return self::getToken($nonce, $audience);
-    }
-    
-    /**
-     * Creates a session (can be used by microservices)
-     *
-     * @auth microservice
-     * @url POST /ms/sessions/ guid=$guid,user_id=$userId,session_name=$sessionName,token_id=$tokenId
-     */
-    public static function createMS($guid, $userId, $sessionName, $tokenId)
-    {
-        if (!self::checkGuid($guid)) {
-            throw new FieldValidationException("Not a valid guid", array("guid"));
-        }
-        $session_id = BaseService::create("INSERT INTO `sessions` (user, `guid`, `session_name`,`token_id`) VALUES (:user, :guid, :name, :tokenId)", array("user"=>$userId,"guid"=>$guid,"name"=>$sessionName, "tokenId"=>$tokenId));
-        if (!$session_id) {
-            throw new RuntimeException("Could not create a new session.");
-        }
         return true;
+    }
+
+    /**
+     * Returns the guid of the current local session (if one exists)
+     *
+     * @return guid of the current session or null if no session exists
+     */
+    public static function getCurrentGuid()
+    {
+        $localSession = self::getLocalSession();
+        return is_null($localSession) ? null : $localSession["guid"];
+    }
+
+    /**
+     * Creates a new access code in case the current session is valid
+     *
+     * @param request_url the url that requested the access code
+     * @param audience the api url the access token will be for
+     *
+     * @return access_code the code to access the access token
+     */
+    public static function createNewAccessCode($request_url, $audience)
+    {
+        $session_info = self::getSessionSafe();
+        return AccessTokenService::createAccessCode($session_info["ID"], $request_url, $audience);
+    }
+
+    /**
+     * Returns a session safely.
+     * Checks if the session has been expired already.
+     * In any error case, this method will throw an error.
+     *
+     * @param session_id the ID or guid of the session
+     *
+     * @return session the information of the session
+     */
+    public static function getSessionSafe($session_id=null)
+    {
+        // 0. check if the authentication mode is set to server
+        if (AUTH_MODE != AUTH_SERVER) {
+            throw new RuntimeException("Illegal session configuration. This backend has no session login functionality.");
+        }
+    
+        // 1. retrieve local session if no session_id is given
+        if (is_null($session_id)) {
+            $localSession = self::getLocalSession();
+            if (is_null($localSession)) {
+                throw new RestException(404, "No current session available.");
+            }
+            $session_id = $localSession["guid"];
+        }
+
+        // 2. retrieve session from database
+        $session_info = self::get($session_id); // will throw an error in case the session cannot be found
+
+        // 3. check if session is still valid
+        if (strtotime($session_info["expires_at"]) - time() < 0) {
+            self::delete($session_info["guid"]); // delete invalid session
+            throw new RestException(400, "Session has expired. Please log in again.");
+        }
+
+        return $session_info;
+    }
+
+    /**
+     * Returns an access token in exchange for a access code
+     *
+     * @param access_code the access code that should be exchanged for an access token
+     * @param nonce the nonce (a random number) that will be integrated into the token
+     *
+     * @return access_token
+     */
+    public static function getAccessToken($access_code, $nonce)
+    {
+        // 1. check if session has been expired
+        $session_id = AccessTokenService::getSessionId($access_code);
+        $session_info = self::getSessionSafe($session_id);
+
+        // 2. Update session expire date
+        if (!BaseService::execute("UPDATE `sessions` SET expires_at = DATE_ADD(NOW(), INTERVAL 14 DAY) WHERE `ID` = :id", array("id"=>$session_id))) {
+            throw new RuntimeException("Could not update session!");
+        }
+
+        // 3. retrieve necessary information
+        $userId = intval($session_info["user"]);
+        $userInfo = UserService::get($userId);
+        $scope = UserService::getRoles($userId);
+
+        // 4. generate and return access token
+        return AccessTokenService::useAccessCode($access_code, $nonce, $session_info["guid"], $userInfo, $scope);
+    }
+
+    /**
+     * Retrieves a session
+     *
+     * @param guid the guid or ID of the session
+     * @param user user ID or NULL
+     * @param throw404 whether a 404 exception should be thrown or NULL be returned
+     *
+     * @return session_info or NULL if no session has been found and $throw404==false.
+     *
+     * @auth admin,self
+     * @url GET /users/$user/sessions/$guid
+     */
+    public static function get($guid, $user=null, $throw404=true)
+    {
+        $whereClause = preg_match("/^[0-9]+?$/", $guid) ? "`ID`=:selector" : "`guid`=:selector";
+        $data = array("selector"=>$guid,"user"=>$user);
+        return BaseService::get("SELECT ID, `guid`, session_name, user, created_at, expires_at FROM `sessions` WHERE $whereClause AND (:user is NULL OR :user = `user`)", $data, $throw404, "session", $guid);
+    }
+
+    /**
+     * Deletes a user's session.
+     *
+     * @param guid guid or ID of the session
+     *
+     * @auth admin,self
+     * @url DELETE /me/sessions/$sessionId
+     * @url DELETE /users/$user/sessions/$sessionId
+     */
+    public static function delete($guid, $user=null)
+    {
+        if (AUTH_MODE != AUTH_SERVER) {
+            throw new RuntimeException("Illegal session configuration. This backend has no session login functionality.");
+        }
+
+        // 1. check if session exists
+        $session_info = self::get($guid);
+
+
+        // 2. invalidate not used access codes and revoke still valid tokens
+        AccessTokenService::invalidateSessionData($session_info["ID"]);
+        
+        // 3. remove local session
+        self::setLocalSession(null);
+
+        // 4. remove database session
+        if (!BaseService::execute("DELETE FROM `sessions` WHERE `guid` = :guid", array("guid"=>$guid))) {
+            throw new RuntimeException("Could not delete the session '$guid'.");
+        }
+        Response::setStatus(204);
+        return true;
+    }
+
+    /**
+     * Deletes a session
+     *
+     * @auth admin
+     * @url DELETE /sessions/$sessionId
+     */
+    public static function deleteByAdmin($sessionId)
+    {
+        return self::delete($sessionId, null);
+    }
+
+
+    /**
+     * Retrieves a specific session
+     *
+     * @auth admin
+     * @url GET /sessions/$guid
+     */
+    public static function getByAdmin($guid, $throw404=true)
+    {
+        return self::get($guid, null, $throw404);
     }
 
     /**
@@ -92,146 +239,7 @@ class SessionService
         return $guid ? self::get($guid, null, false) : null;
     }
 
-    /**
-     * If the user is already logged in, this method will provide a token
-     */
-    public static function getToken($nonce, $audience=null)
-    {
-        $localSession = self::getLocalSession();
-        if (is_null($localSession)) {
-            throw new RestException(401, "No session present");
-        }
-        return self::createToken(array("user"=>$localSession["user"],"username"=>$localSession["username"]), $localSession["guid"], $nonce, $audience);
-    }
 
-    /**
-     * Delete a user's session
-     *
-     * @auth admin,self
-     * @url DELETE /me/sessions/$sessionId
-     * @url DELETE /users/$user/sessions/$sessionId
-     */
-    public static function delete($sessionId, $user=null)
-    {
-        if (AUTH_MODE != AUTH_SERVER) {
-            throw new RuntimeException("Illegal session configuration. This backend has no session login functionality.");
-        }
-        if (!self::get($sessionId, $user)) {
-            throw new RestException(400, "Could not find session '$sessionId' for user $user");
-        }
-        self::deleteByMS($sessionId);
-        self::setLocalSession(null);
-        $result = self::informClients(MicroService::DELETE, "ms/sessions/".$sessionId);
-        return $result->status < 300;
-    }
-
-    /**
-     * Deletes a session
-     *
-     * @auth admin
-     * @url DELETE /sessions/$sessionId
-     */
-    public static function deleteByAdmin($sessionId)
-    {
-        return self::delete($sessionId, null);
-    }
-
-    /**
-     * Deletes a session (also for microservices)
-     *
-     * @auth microservice
-     * @url DELETE ms/sessions/$sessionId
-     */
-    public static function deleteByMS($sessionId)
-    {
-        if (!BaseService::execute("DELETE FROM `sessions` WHERE `guid` = :guid", array("guid"=>$sessionId))) {
-            throw new RuntimeException("Could not delete the session '$sessionId'.");
-        }
-        Response::setStatus(204);
-        return true;
-    }
-
-    /**
-     * Sends a message to all clients.
-     *
-     * @param method GET, POST, PATCH, DELETE
-     * @param relativeUrl the relative url of the request. The apiUrl will be pre-pended automatically.
-     * @param data the data to send
-     *
-     * @return the result of the last error or, if no error occurred, the result of the last request.
-     */
-    private static function informClients($method, $relativeUrl, $data=array())
-    {
-        global $config;
-        $lastResult = new class {
-            public $status = 200;
-        };
-        $lastUrl = "";
-        foreach ($config[CF_AUTH_CLIENTS] as $api => $secret) {
-            if (!array_key_exists($api, $config[CF_AUTH_MICROSERVICES])) {
-                throw new RuntimeException("Every client must have a shared secret for microservice functionality, too!");
-            }
-            $result = MicroService::exec($method, $api, $relativeUrl, $data);
-            if ($lastResult->status < 300 || $result->status >= 300) {
-                $lastResult = $result;
-                $lastUrl = $api."/".$relativeUrl;
-            }
-        }
-        if ($lastResult->status >=300) {
-            throw new RuntimeException("There has been a problem with informing at least one client! Last error-request was '$lastUrl'.");
-        }
-        return $lastResult;
-    }
-
-    /**
-    * Retrieves a specific session
-    *
-    * @auth admin,self
-    * @url GET /users/$user/sessions/$guid
-    */
-    public static function get($guid, $user=null, $throw404=true)
-    {
-        if (is_null($user)) {
-            return BaseService::get("SELECT `guid`, session_name, user, created_at, expires_at FROM `sessions` WHERE `guid`=:guid", array("guid"=>$guid), $throw404, "session", $guid);
-        }
-        return BaseService::get("SELECT `guid`, session_name, user, created_at, expires_at FROM `sessions` WHERE `guid`=:guid AND `user`=:user", array("guid"=>$guid,"user"=>$user), $throw404, "session", $guid." of user $user");
-    }
-
-    /**
-     * Retrieves a specific session
-     *
-     * @auth admin
-     * @url GET /sessions/$guid
-     */
-    public static function getByAdmin($guid, $throw404=true)
-    {
-        return self::get($guid, null, $throw404);
-    }
-
-    private static function getTokenId($guid)
-    {
-        $result = BaseService::get("SELECT token_id FROM `sessions` WHERE `guid`=:guid", array("guid"=>$guid), false, "session", $guid);
-        return $result ? $result["token_id"] : null;
-    }
-
-    private static function createToken($userInfo, $guid, $nonce, $audience)
-    {
-        $scope = UserService::getRoles($userInfo["user"]);
-
-        if (!BaseService::execute("UPDATE `sessions` SET expires_at = DATE_ADD(NOW(), INTERVAL 14 DAY) WHERE `guid` = :guid", array("guid"=>$guid))) {
-            throw new RuntimeException("Could not update session!");
-        }
-
-        $_SESSION["guid"] = $guid;
-
-        // create new token
-        $tokenId = self::getTokenId($guid);
-
-        $accessToken = TokenManager::createAccessToken($scope, $audience, $userInfo, $guid, $nonce, $tokenId);
-        
-        return array("access_token"=>$accessToken);
-    }
-    
     /**
      * Writes session information into the session cookie
      *
@@ -265,12 +273,12 @@ class SessionService
     }
 
 
-    private static function guidv4($data=null)
+    private static function createGuid($data=null)
     {
         $data = $data ?? random_bytes(16);
   
         $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // set version to 0100
-      $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // set bits 6-7 to 10
+        $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // set bits 6-7 to 10
   
       return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }

@@ -124,7 +124,7 @@ class RestServer
         foreach ($call["args"] as $field => $fieldInfo) {
             $paramKeyExists = array_key_exists("$".$field, $params);
             if (!$paramKeyExists && !$fieldInfo["optional"]) {
-                throw new RuntimeException("The method's ('".$call["method"]."') field '$field' must be part of the request documentation.");
+                throw new RuntimeException("The method's ('".$call["method"]."') field '$field' must be part of the request documentation and, if optional, have a default value.");
             }
             $paramValue = $paramKeyExists ? $params["$$field"] : $fieldInfo["defaultValue"];
             $result[$fieldInfo["pos"]] = $paramValue;

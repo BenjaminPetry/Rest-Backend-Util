@@ -7,13 +7,18 @@
 
 class TokenManager
 {
+    public static function TOKEN_EXPIRE_DURATION()
+    { // returns the duration (in min) after a token expires
+        return 120;
+    }
+
     /**
      * Checks whether the given audience exists and returns the secret of the audience
      */
     public static function checkAudience($audience, $isMicroservice=false)
     {
         global $config;
-        if (($isMicroservice && !array_key_exists($audience, $config[CF_AUTH_MICROSERVICES])) || (!$isMicroservice && !array_key_exists($audience, $config[CF_AUTH_CLIENTS]))) {
+        if (($isMicroservice && !array_key_exists($audience, $config[CF_AUTH_MICROSERVICES])) || (!$isMicroservice && !array_key_exists($audience, $config[CF_AUTH_AUDIENCES]))) {
             throw new RestException(401, "Illegal authentication audience.");
         }
         return true;
@@ -37,22 +42,19 @@ class TokenManager
         if ($audience == null) {
             $audience = Request::$apiUrl;
         }
-        $expireAt = strtotime(date('Y-m-d H:i:s')." + 2 hours");
+        $expireAt = strtotime(date('Y-m-d H:i:s')." + ".self::TOKEN_EXPIRE_DURATION()." minutes");
         $secret = self::getSecret($audience, false);
         return self::createToken($secret, $scope, $audience, $expireAt, $userInfo, $guid, $nonce, $tokenId);
     }
 
-    public static function verifySessionInformation($session)
+    public static function checkAccessTokenRevokeState($session)
     {
         if (!AUTH_ENABLED || $session["isMicroservice"]) {
             return true;
         }
-        $result = DB::fetch("SELECT * FROM `sessions` WHERE `guid`=:guid AND `user`=:user AND `token_id`=:tokenId LIMIT 1", array("guid"=>$session["guid"], "user"=>$session["user"], "tokenId"=>$session["tokenId"]));
-        if (!$result) {
-            throw new RestException(401, "Session is not valid anymore! Get a new access token.");
-        }
-        if (strtotime($result["expires_at"]) - time() < 0) {
-            throw new RestException(401, "Session expired! You need to log in again.");
+        $result = DB::count("SELECT COUNT(*) FROM `access_tokens_revoked` WHERE `token_id`=:token_id", array("token_id"=>$session["tokenId"]));
+        if ($result > 0) {
+            throw new RestException(401, "Token has been revoked.");
         }
         return true;
     }
@@ -171,7 +173,7 @@ class TokenManager
             return SECRET;
         }
         self::checkAudience($audience, $isMicroservice);
-        return $isMicroservice ? $config[CF_AUTH_MICROSERVICES][$audience] : $config[CF_AUTH_CLIENTS][$audience];
+        return $isMicroservice ? $config[CF_AUTH_MICROSERVICES][$audience] : $config[CF_AUTH_AUDIENCES][$audience];
     }
 
     private static function createSignature($header64, $body64, $secret)

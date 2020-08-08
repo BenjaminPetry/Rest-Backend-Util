@@ -20,6 +20,7 @@ class Request
     public static $rootDir; // the servers directory in which the API is located on the disc (no ending slash)
     public static $rootUrl; // the root url under which this API can be accessed (without the server and no ending slash)
     public static $apiUrl; // the api url (like $rootUrl, but including the server. No ending slash)
+    public static $originUrl; // the origin, which sent this request
     private static $queryParams; // the query (only GET requests, e.g. api?=query) of the url as array
     private static $bodyParams; // the body parameters (not for GET requests)
     public static $method;
@@ -32,10 +33,11 @@ class Request
         self::$rootDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_FILENAME']));
         self::$rootUrl = dirname($_SERVER['SCRIPT_NAME']);
         self::$apiUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http")."://".$_SERVER['HTTP_HOST'].self::$rootUrl;
+        self::$originUrl = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : (isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER["HTTP_ORIGIN"] : "");
         self::$method = $_SERVER['REQUEST_METHOD'];
-        self::$queryParams = self::$method == "GET" ? filter_input_array(INPUT_GET) : array();
+        self::$queryParams = filter_input_array(INPUT_GET);
         self::$bodyParams = self::$method != "GET" ? json_decode(file_get_contents('php://input'), true) : array();
-        self::$url = $path = preg_replace('/\?.*$/', '', $_SERVER['REQUEST_URI']); // remove the query
+        self::$url = preg_replace('/\?.*$/', '', $_SERVER['REQUEST_URI']); // remove the query
         self::$url = preg_replace('/^' . preg_quote(self::$rootUrl, '/') . '/', '', self::$url); // remove the root url
         self::$url = removeSlash(self::$url, 3); // remove starting and ending slash
         $formats = isset($_GET['format']) ? $_GET['format'] : (isset($_SERVER['HTTP_FORMAT']) ? $_SERVER['HTTP_FORMAT'] : (isset($_SERVER["HTTP_ACCEPT"]) ? preg_replace('/\s+/i', '', $_SERVER['HTTP_ACCEPT']) : null));

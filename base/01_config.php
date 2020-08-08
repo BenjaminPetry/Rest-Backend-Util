@@ -26,6 +26,7 @@ $config = array(
   CF_AUTH_SUPERADMIN => 1,
   CF_AUTH_ISS => "http://localhost/example/v1",
   CF_AUTH_CLIENTS => array(),
+  CF_AUTH_AUDIENCES => array(),
   CF_AUTH_MICROSERVICES => array(),
   CF_AUTH_MICROSERVICES_PERMISSIONS => array(),
 );

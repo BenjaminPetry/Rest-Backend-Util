@@ -82,4 +82,7 @@ RestServer::setAuthHandler($authHandler);
 // ################################### DEFAULT CONTROLLERS #####################################
 // #############################################################################################
 
+if (AUTH_MODE != AUTH_NONE) {
+    RestServer::controller("AuthService", FRAMEWORK_CWD."/services/authService.php");
+}
 RestServer::controller("ToolService", FRAMEWORK_CWD."/services/toolService.php");

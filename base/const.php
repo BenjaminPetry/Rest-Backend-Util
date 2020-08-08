@@ -63,5 +63,8 @@ define("CF_AUTH", "auth-method");
 define("CF_AUTH_SUPERADMIN", "auth-superadmin");
 define("CF_AUTH_ISS", "auth-iss");
 define("CF_AUTH_CLIENTS", "auth-clients");
+define("CF_AUTH_CLIENTS_AUDIENCE", "audience");
+define("CF_AUTH_CLIENTS_AUTH_URL", "authorize-url");
+define("CF_AUTH_AUDIENCES", "auth-audiences");
 define("CF_AUTH_MICROSERVICES", "auth-microservices");
 define("CF_AUTH_MICROSERVICES_PERMISSIONS", "auth-microservices-permissions");

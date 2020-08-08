@@ -48,6 +48,11 @@ class Log
         self::log("DEBUG: ".print_r($content, true));
     }
 
+    public static function error($message)
+    {
+        self::log("ERROR: ".print_r($message, true));
+    }
+
     public static function log($content)
     {
         self::write("<br>\n".date("d-m-Y H:i:s")." ".$content);

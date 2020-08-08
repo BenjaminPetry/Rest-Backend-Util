@@ -61,3 +61,36 @@ class MicroService
         return json_decode($result);
     }
 }
+
+// May be useful in the future
+/**
+ * Sends a message to all clients.
+ *
+ * @param method GET, POST, PATCH, DELETE
+ * @param relativeUrl the relative url of the request. The apiUrl will be pre-pended automatically.
+ * @param data the data to send
+ *
+ * @return the result of the last error or, if no error occurred, the result of the last request.
+ */
+// private static function informClients($method, $relativeUrl, $data=array())
+//     {
+//         global $config;
+//         $lastResult = new class {
+//             public $status = 200;
+//         };
+//         $lastUrl = "";
+//         foreach ($config[CF_AUTH_AUDIENCES] as $api => $secret) {
+//             if (!array_key_exists($api, $config[CF_AUTH_MICROSERVICES])) {
+//                 throw new RuntimeException("Every client must have a shared secret for microservice functionality, too!");
+//             }
+//             $result = MicroService::exec($method, $api, $relativeUrl, $data);
+//             if ($lastResult->status < 300 || $result->status >= 300) {
+//                 $lastResult = $result;
+//                 $lastUrl = $api."/".$relativeUrl;
+//             }
+//         }
+//         if ($lastResult->status >=300) {
+//             throw new RuntimeException("There has been a problem with informing at least one client! Last error-request was '$lastUrl'.");
+//         }
+//         return $lastResult;
+//     }
