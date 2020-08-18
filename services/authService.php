@@ -13,21 +13,38 @@ require_once("sessionService.php");
  * It uses the SessionService-class to create and delete sessions and tokens.
  * @see SessionService for login and logout interactions
  *
+ * Several methods of the AuthService require a $request_url. The $request_url is the url of the frontend, that
+ * is also registered in the config's CF_AUTH_CLIENTS array with its corresponding audience (backend) and
+ * auth-url (where redirects go.)
+ *
+ * Every redirect to the auth-url contains the response_type field, which can be one of the following parameters:
+ * - access_code: the url also contains a field "access_code" with an access code which can be exchanged for an access token
+ * - login_required: the "silent" request for an access code failed and a normal login is required
+ * - logout_successful: the logout action was successful
+ * - logout_failed: the logout action failed
+ *
  * @auth none
  */
 class AuthService
 {
+    private static $RESPONSE_TYPE_FIELD = "response_type";
+    private static $RESPONSE_TYPE_ACCESS_CODE = "access_code";
+    private static $RESPONSE_TYPE_LOGIN_REQUIRED = "login_required";
+    private static $RESPONSE_TYPE_LOGOUT_SUCCESSFUL = "logout_successful";
+    private static $RESPONSE_TYPE_LOGOUT_FAILED = "logout_failed";
+
     /**
      * Checks if a user is already logged in. Otherwise it displays the login form.
      *
      * @param request_url the base url that requests an access code
      * @param email (optional) an initial email to login
+     * @param silent (optional) if silent is set to true, no login form will be displayed. Instead a redirect to the auth-url is done with the parameter '?login=required'
      *
      * @return void will display HTML code!
      *
-     * @url GET /authorize?request_url=$request_url&email=$email
+     * @url GET /authorize/login?request_url=$request_url&email=$email&silent=$silent
      */
-    public static function default($request_url="", $email="")
+    public static function default($request_url="", $email="", $silent=false)
     {
         global $config;
         // 1. check request url and get its audience
@@ -40,14 +57,20 @@ class AuthService
         if (!is_null(SessionService::getCurrentGuid())) {
             try {
                 $access_code = SessionService::createNewAccessCode($request_url, $audience);
-                self::writeRedirect($auth_url, array("access_code" => $access_code));
+                self::writeRedirect($auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
             } catch (Exception $e) {
                 self::writeForm($request_url, $email, $e->getMessage());
             }
             exit();
         }
 
-        // 3. if no user is logged in, display loggin form
+        // 3. if no user is logged in and silent is set to true
+        if ($silent) {
+            self::writeRedirect($auth_url, self::$RESPONSE_TYPE_LOGIN_REQUIRED);
+            exit();
+        }
+
+        // 4. if no user is logged in and silent is false, display loggin form
         self::writeForm($request_url, $email, "");
         exit();
     }
@@ -60,7 +83,7 @@ class AuthService
      *
      * @return void will display HTML code!
      *
-     * @url POST /authorize?request_url=$request_url
+     * @url POST /authorize/login?request_url=$request_url
      */
     public static function onLogin($request_url)
     {
@@ -80,7 +103,7 @@ class AuthService
             $user = UserService::get($email, true, true);
             if (SessionService::create($user)) {
                 $access_code = SessionService::createNewAccessCode($request_url, $audience);
-                self::writeRedirect($auth_url, array("access_code" => $access_code));
+                self::writeRedirect($auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
             } else {
                 self::writeForm($request_url, $email, "There has been an internal error! Please try again later.");
             }
@@ -110,7 +133,7 @@ class AuthService
         if (!is_null($guid)) {
             SessionService::delete($guid);
         }
-        self::writeRedirect($auth_url, array("logout" => "true"));
+        self::writeRedirect($auth_url, self::$RESPONSE_TYPE_LOGOUT_SUCCESSFUL);
         exit();
     }
 
@@ -195,7 +218,7 @@ class AuthService
       <?php } ?>
       <div class="login__input-container">
         <div class="login__email-container login__container">
-          <input type="email" class="login__input" placeholder="E-Mail" value="<?php echo($login_email); ?>" name="email" autocomplete="email" required id="email">
+          <input type="email" class="login__input" placeholder="E-Mail" value="<?php echo($login_email); ?>" name="email" autocomplete="email" autofocus required id="email">
           <label for="email" class="login__label">E-Mail</label>
         </div>
         <div class="login__password-container login__container">
@@ -210,8 +233,9 @@ class AuthService
       self::writeHTMLEnd();
     }
 
-    public static function writeRedirect($redirect_url, $param=array())
+    public static function writeRedirect($redirect_url, $response_type, $param=array())
     {
+        $param[self::$RESPONSE_TYPE_FIELD] = $response_type;
         $url = $redirect_url."?".http_build_query($param);
         self::writeHTMLStart(); ?> 
 <script type="text/javascript">window.location.href="<?php echo($url); ?>"</script>

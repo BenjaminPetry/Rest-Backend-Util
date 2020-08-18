@@ -27,62 +27,78 @@ backend           # the current working directory (also as \$cwd)
 
 ### Configuration
 
-<sup>v0.53</sup>
+<sup>v0.7</sup>
 
 The `init.php` can be configured by a configuration file. Use `config.php` for general settings and `config.development.php` and `config.production.php` for development and production mode, respectively. The file should look like the following:
 
 ```PHP
 <?php
-// Use $cwd if you want to refer to the current working directory (parent directory of this directory)
 
-//define('DEBUG',true); // uncomment to print debug text
-//define('TEST',true); // uncomment to use TEST-settings, such as the test database
-$config["run_as_local"] = true; // whether the PHP script should be executed at localhost (e.g. not sending e-mail when exceptions occur)
-$config["name"] = "create-bpetry-app"; // description of the project for exception e-mails
-$config["cors-accept-origins"] = array("http://localhost:3000"); // the url from which the backend accepts cross origin requests
+// Use CWD if you want to refer to the current working directory (parent directory of this directory)
 
-// EMAIL SETTINGS
-$config["email-default-sender"] = "admin@bpetry.de";
-$config["email-log-receiver"] = "exceptions@bepeproductions.de";
+$config[CF_VERBOSE] = false; // set to true to print out additional information
+$config[CF_TEST] = false; // set to true to use test-settings, such as the test database
+$config[CF_FORCE_RUN_LOCAL] = true; // whether the PHP script should be executed at localhost (e.g. not sending e-mail when exceptions occur)
+$config[CF_ERRORS_DISPLAY] = true;
+
+$config[CF_NAME] = "create-bpetry-app"; // description of the project for exception e-mails
+$config[CF_CORS_ACCEPT_ORIGINS] = array("http://localhost:3000"); // the url from which the backend accepts cross origin requests
 
 // PATH SETTINGS
-$config["path-cache"] = "$cwd/cache";
-$config["path-tmp"] = "$cwd/tmp";
-$config["path-log"] = "$cwd/log";
+$config[CF_PATH_CACHE] = CWD."/cache";
+$config[CF_PATH_TMP] = CWD."/tmp";
+$config[CF_PATH_LOG] = CWD."/log";
+
+// EMAIL SETTINGS
+$config[CF_EMAIL_DEFAULT_SENDER] = "admin@bpetry.de";
+$config[CF_EMAIL_LOG_RECEIVER] = "exceptions@bepeproductions.de";
 
 // DATABASE SETTINGS
-$config["db-host"] = "127.0.0.1:3306";
-$config["db-user"] = "util";
-$config["db-password"] = "password";
-$config["db-name"] = "util";
-
-// TEST DATABASE SETTINGS
-$config["db-host-test"] = "127.0.0.1:3306";
-$config["db-user-test"] = "util";
-$config["db-password-test"] = "password";
-$config["db-name-test"] = "util-test";
+$config[CF_DB] = array(
+  CF_DB_CONFIG_DEFAULT => array(
+    CF_DB_HOST => "127.0.0.1:3306",
+    CF_DB_USER => "util",
+    CF_DB_PASSWORD => "password",
+    CF_DB_NAME => "util"
+  ),
+  CF_DB_CONFIG_TEST => array(
+    CF_DB_HOST => "127.0.0.1:3306",
+    CF_DB_USER => "util",
+    CF_DB_PASSWORD => "password",
+    CF_DB_NAME => "util-test"
+  )
+);
 
 // BACKEND SECRET
-$config["secret"] = "abc..."; // 128-byte secret, used for token signatures
+$config[CF_SECRET] = "abc..."; // 128-byte secret, used for token signatures
 
 // TOOLS
-$config["tools-enabled"] = false;
+$config[CF_ENABLE_TOOLS] = false; // tool-urls can help you generate secrets, etc. but should be disabled in production mode
 
 // AUTHORIZATION
-$config["auth"] = AUTH_SERVER; // AUTH_NONE, AUTH_SERVER, AUTH_CLIENT
-$config["auth-superadmin"] = 1; // the user ID of the user that is superadmin
-$config["auth-iss"] = "http://localhost/example/v1"; // issuer of the tokens
-$config["auth-clients"] = array(
+$config[CF_AUTH] = AUTH_SERVER; // AUTH_NONE, AUTH_SERVER, AUTH_CLIENT
+$config[CF_AUTH_SUPERADMIN] = 1; // the user ID of the user that is superadmin
+$config[CF_AUTH_ISS] = "http://localhost/example/v1"; // issuer of the tokens
+// the keys that the authentication clients use (if this is the server). Every client must be present in the microservices array, too!
+// this array contains all clients (frontends) that will use this authorization server. They are associated with their corresponding backend
+$config[CF_AUTH_CLIENTS] = array(
+  "http://localhost:3000" => array(
+    CF_AUTH_CLIENTS_AUDIENCE=>"http://localhost/example/v1",
+    CF_AUTH_CLIENTS_AUTH_URL=>"http://localhost:3000/authorize.html")
+);
+
+$config[CF_AUTH_AUDIENCES] = array(// contains the key of each backend that will be used to generate the tokens
   "http://localhost/example/v1" => "secret...abc..."
-); // the keys that the authentication clients use (if this is the server). Every client must be present in the microservices array, too!
-$config["auth-microservices"] = array(
+);
+$config[CF_AUTH_MICROSERVICES] = array(
   "http://localhost/example/v1" => "secret...abc..."
 ); // the keys of microservices that can use methods of these classes
-$config["auth-microservices-permissions"] = array(
-  "http://localhost/example/v1" => array("permission1","permission2")
-}; // this array describes the specific permissions of a microservice (use @auth microservice-[permission] in your methods)
+$config[CF_AUTH_MICROSERVICES_PERMISSIONS] = array(
+  "http://localhost/example/v1" => array("test")
+); // this array describes the specific permissions of a microservice (use @auth microservice-[permission] in your methods)
+
 ```
-<sup>v0.61</sup>
+
 **Note**: Setting the HTTP headers `"HTTP_TEST" = true` and `"HTTP_VERBOSE" = true` will override the setting of `CF_TEST` and `CF_VERBOSE`, respectively.
 
 ### Directories and Files

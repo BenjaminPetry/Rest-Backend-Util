@@ -52,8 +52,8 @@ class TokenManager
         if (!AUTH_ENABLED || $session["isMicroservice"]) {
             return true;
         }
-        $result = DB::count("SELECT COUNT(*) FROM `access_tokens_revoked` WHERE `token_id`=:token_id", array("token_id"=>$session["tokenId"]));
-        if ($result > 0) {
+        $result = DB::fetch("SELECT COUNT(*) as `count` FROM `access_tokens_revoked` WHERE `token_id`=:token_id", array("token_id"=>$session["tokenId"]));
+        if (!$result || intval($result["count"]) > 0) {
             throw new RestException(401, "Token has been revoked.");
         }
         return true;
@@ -121,7 +121,7 @@ class TokenManager
             }
         } else {
             $result["guid"]=$payload->sub;
-            $result["user"]=$userInfo->user;
+            $result["user"]=intval($userInfo->ID);
             $result["username"]=$userInfo->username;
         }
 

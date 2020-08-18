@@ -4,7 +4,7 @@
  * This software is provided on an "AS IS" BASIS,
  * without warranties or conditions of any kind, either express or implied.
  */
-define("META_UTIL_VERSION", "0.61");
+define("META_UTIL_VERSION", "0.7");
 define("META_UTIL_COPYRIGHT", "2020 by Benjamin Petry");
 require_once("base/const.php"); // add constants
 

@@ -74,7 +74,7 @@ class Auth
                 $currentRights[] = AUTH_ROLE_SELF;
             }
         } elseif (substr(Request::$url."/", 0, 3)!="ms/") {
-            throw new RestException(401, "Microservices are only allowed to access microservice-urls starting with 'ms'!");
+            throw new RestException(403, "Microservices are only allowed to access microservice-urls starting with 'ms'!");
         }
 
         // check whether, the current rights and the rights for the call have an intersection
