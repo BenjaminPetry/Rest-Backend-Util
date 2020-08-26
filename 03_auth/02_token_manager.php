@@ -114,8 +114,8 @@ class TokenManager
             $result["guid"]="";
             $result["user"]=9999;
             $result["username"]=$userInfo;// sending url
-            if (array_key_exists($userInfo, $config[CF_AUTH_MICROSERVICES_PERMISSIONS])) { // checking if there are additional permissions for the microservice
-                foreach ($config[CF_AUTH_MICROSERVICES_PERMISSIONS][$userInfo] as $permission) {
+            if (array_key_exists($userInfo, $config[CF_AUTH_MICROSERVICES]) && array_key_exists(CF_PERMISSIONS, $config[CF_AUTH_MICROSERVICES][$userInfo])) { // checking if there are additional permissions for the microservice
+                foreach ($config[CF_AUTH_MICROSERVICES][$userInfo][CF_PERMISSIONS] as $permission) {
                     $result["scope"][] = AUTH_ROLE_MICROSERVICE."-".$permission;
                 }
             }
@@ -173,7 +173,7 @@ class TokenManager
             return SECRET;
         }
         self::checkAudience($audience, $isMicroservice);
-        return $isMicroservice ? $config[CF_AUTH_MICROSERVICES][$audience] : $config[CF_AUTH_AUDIENCES][$audience];
+        return $isMicroservice ? $config[CF_AUTH_MICROSERVICES][$audience][CF_SECRET] : $config[CF_AUTH_AUDIENCES][$audience][CF_SECRET];
     }
 
     private static function createSignature($header64, $body64, $secret)

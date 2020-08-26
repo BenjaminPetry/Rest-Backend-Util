@@ -18,8 +18,6 @@ class RestServer
             }, E_WARNING);
         }
 
-        session_start();
-
         // Check for OPTIONS request
         if (Request::$method == "OPTIONS") {
             Response::send(null);

@@ -57,7 +57,7 @@ class AuthService
         if (!is_null(SessionService::getCurrentGuid())) {
             try {
                 $access_code = SessionService::createNewAccessCode($request_url, $audience);
-                self::writeRedirect($auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
+                self::writeRedirect("Login still active", $auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
             } catch (Exception $e) {
                 self::writeForm($request_url, $email, $e->getMessage());
             }
@@ -66,7 +66,7 @@ class AuthService
 
         // 3. if no user is logged in and silent is set to true
         if ($silent) {
-            self::writeRedirect($auth_url, self::$RESPONSE_TYPE_LOGIN_REQUIRED);
+            self::writeRedirect("Login required", $auth_url, self::$RESPONSE_TYPE_LOGIN_REQUIRED);
             exit();
         }
 
@@ -103,7 +103,7 @@ class AuthService
             $user = UserService::get($email, true, true);
             if (SessionService::create($user)) {
                 $access_code = SessionService::createNewAccessCode($request_url, $audience);
-                self::writeRedirect($auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
+                self::writeRedirect("Login successful", $auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
             } else {
                 self::writeForm($request_url, $email, "There has been an internal error! Please try again later.");
             }
@@ -133,7 +133,7 @@ class AuthService
         if (!is_null($guid)) {
             SessionService::delete($guid);
         }
-        self::writeRedirect($auth_url, self::$RESPONSE_TYPE_LOGOUT_SUCCESSFUL);
+        self::writeRedirect("Logout successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_SUCCESSFUL);
         exit();
     }
 
@@ -233,14 +233,14 @@ class AuthService
       self::writeHTMLEnd();
     }
 
-    public static function writeRedirect($redirect_url, $response_type, $param=array())
+    public static function writeRedirect($title, $redirect_url, $response_type, $param=array())
     {
         $param[self::$RESPONSE_TYPE_FIELD] = $response_type;
         $url = $redirect_url."?".http_build_query($param);
         self::writeHTMLStart(); ?> 
 <script type="text/javascript">window.location.href="<?php echo($url); ?>"</script>
 <div class="redirect container">
-<h1 class="redirect__header heading">Login successful</h1>
+<h1 class="redirect__header heading"><?php echo($title); ?></h1>
   <div class="redirect__message">
     You will be redirected to <a href="<?php echo($url); ?>"><?php echo($redirect_url); ?></a>.
   </div>

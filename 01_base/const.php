@@ -55,7 +55,8 @@ define("CF_DB_USER", "db-user");
 define("CF_DB_PASSWORD", "db-password");
 define("CF_DB_NAME", "db-name");
 
-define("CF_SECRET", "db-name");
+define("CF_SECRET", "secret");
+define("CF_PERMISSIONS", "permissions");
 
 define("CF_ENABLE_TOOLS", "enable-tools");
 
@@ -67,4 +68,3 @@ define("CF_AUTH_CLIENTS_AUDIENCE", "audience");
 define("CF_AUTH_CLIENTS_AUTH_URL", "authorize-url");
 define("CF_AUTH_AUDIENCES", "auth-audiences");
 define("CF_AUTH_MICROSERVICES", "auth-microservices");
-define("CF_AUTH_MICROSERVICES_PERMISSIONS", "auth-microservices-permissions");

@@ -6,16 +6,16 @@
  */
 define("META_UTIL_VERSION", "0.7");
 define("META_UTIL_COPYRIGHT", "2020 by Benjamin Petry");
-require_once("base/const.php"); // add constants
+require_once("01_base/const.php"); // add constants
 
 // #############################################################################################
 // ######################################### BASE ##############################################
 // #############################################################################################
-require_once("base/00_util.php");
-require_once("base/01_config.php");
-require_once("base/02_mail.php");
-require_once("base/03_log.php");
-require_once("base/04_database.php");
+require_once("01_base/00_util.php");
+require_once("01_base/01_config.php");
+require_once("01_base/02_mail.php");
+require_once("01_base/03_log.php");
+require_once("01_base/04_database.php");
 
 // INIT
 
@@ -48,12 +48,12 @@ if (!is_null(DATABASE_CONFIG)) {
 // ######################################### REST ##############################################
 // #############################################################################################
 
-require_once("rest/00_exceptions.php");
-require_once("rest/01_request.php");
-require_once("rest/02_response.php");
-require_once("rest/03_url_manager.php");
-require_once("rest/04_controller.php");
-require_once("rest/05_rest_server.php");
+require_once("02_rest/00_exceptions.php");
+require_once("02_rest/01_request.php");
+require_once("02_rest/02_response.php");
+require_once("02_rest/03_url_manager.php");
+require_once("02_rest/04_controller.php");
+require_once("02_rest/05_rest_server.php");
 
 // INIT
 Log::debug("** INIT Request **");
@@ -68,15 +68,18 @@ RestServer::init();
 // #############################################################################################
 // ###################################### AUTHENTICATION #######################################
 // #############################################################################################
-require_once("auth/01_auth.php");
-require_once("auth/02_token_manager.php");
-require_once("auth/03_microservice.php");
-require_once("auth/04_basic_auth_handler.php");
+require_once("03_auth/01_auth.php");
+require_once("03_auth/02_token_manager.php");
+require_once("03_auth/03_microservice.php");
+require_once("03_auth/04_basic_auth_handler.php");
 
 // INIT
 Log::debug("** INIT Basic Authentication **");
 $authHandler = new BasicAuthHandler();
 RestServer::setAuthHandler($authHandler);
+
+// Session settings
+session_start();
 
 // #############################################################################################
 // ################################### DEFAULT CONTROLLERS #####################################
