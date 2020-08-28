@@ -86,6 +86,6 @@ session_start();
 // #############################################################################################
 
 if (AUTH_MODE != AUTH_NONE) {
-    RestServer::controller("AuthService", FRAMEWORK_CWD."/services/authService.php");
+    RestServer::controller("AuthInterfaceService", FRAMEWORK_CWD."/services/auth/authInterfaceService.php");
 }
 RestServer::controller("ToolService", FRAMEWORK_CWD."/services/toolService.php");

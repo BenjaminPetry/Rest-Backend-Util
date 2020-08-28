@@ -4,12 +4,14 @@
  * This software is provided on an "AS IS" BASIS,
  * without warranties or conditions of any kind, either express or implied.
  */
-require_once("baseService.php");
-require_once("userService.php");
+require_once(FRAMEWORK_CWD."/services/baseService.php");
+require_once(FRAMEWORK_CWD."/services/userService.php");
 
 /**
  * The access token service can generate access codes and corresponding access tokens.
- * It does not exploit REST functionality, except for microservice revoking tokens.
+ * It does not exploit REST any functionality.
+ * 
+ * @see AuthInterfaceService
  */
 class AccessTokenService
 {
@@ -17,13 +19,19 @@ class AccessTokenService
 
     /**
      * Creates a new access code that can be retrieved
+     * 
+     * @param session_id the ID of the session
+     * @param request_url the URL of the client who wants to access the access token using the generate access code
+     * @param audience the audience (backend) the access token will be for
+     * 
+     * @return string the access code
      */
     public static function createAccessCode($session_id, $request_url, $audience)
     {
         $checkAccessCode = DB::prepare("SELECT COUNT(*) as `count` FROM access_codes WHERE access_code = :value");
         $checkTokenId = DB::prepare("SELECT COUNT(*) as `count` FROM access_codes WHERE token_id = :value");
-        $access_code = uniqueEntry($checkAccessCode, 16);
-        $token_id = uniqueEntry($checkTokenId, 64);
+        $access_code = uniqueRandomString($checkAccessCode, 16);
+        $token_id = uniqueRandomString($checkTokenId, 64);
         $expire_date = strtotime(date('Y-m-d H:i:s')." + ".self::$ACCESS_CODE_EXPIRY_INTERVAL." seconds");
 
         $id = BaseService::create(
@@ -43,12 +51,30 @@ class AccessTokenService
         return $access_code;
     }
 
+    /**
+     * Returns the session id of an access code
+     * 
+     * @param access_code the access code
+     * 
+     * @return int the ID of the access code's session
+     */
     public static function getSessionId($access_code)
     {
         $result = BaseService::get("SELECT `session_id` FROM access_codes WHERE access_code = :access_code", array("access_code"=>$access_code));
-        return $result["session_id"];
+        return intval($result["session_id"]);
     }
     
+    /**
+     * Marks the access code as used and returns an access token
+     * 
+     * @param access_code the access code
+     * @param nonce a random value the client (frontend) will pass and which will be encoded into the access token
+     * @param guid the GUID of the session
+     * @param userInfo an array of the user's information retrieved with UserService
+     * @param scope the rights the user has
+     * 
+     * @return string the access token
+     */
     public static function useAccessCode($access_code, $nonce, $guid, $userInfo, $scope)
     {
         // 1. find the access token
@@ -92,11 +118,23 @@ class AccessTokenService
         return TokenManager::createAccessToken($scope, $audience, $userInfo, $guid, $nonce, $token_id);
     }
 
+    /**
+     * Marks an access code as invalid
+     * 
+     * @param access_code the access code
+     * 
+     * @return bool true if the code could be invalidated
+     */
     public static function invalidateAccessCode($access_code)
     {
-        BaseService::execute("UPDATE access_codes SET valid = 0 WHERE access_code = :access_code", array("access_code"=>$access_code));
+        return BaseService::execute("UPDATE access_codes SET valid = 0 WHERE access_code = :access_code", array("access_code"=>$access_code));
     }
 
+    /**
+     * Invalidates all access codes that belong to a session and revokes all tokens of this session.
+     * 
+     * @param session_id ID of the session
+     */
     public static function invalidateSessionData($session_id)
     {
         // 1. Set not used access codes of the session to invalid
@@ -130,6 +168,11 @@ class AccessTokenService
         }
     }
 
+    /**
+     * Revokes a token from an audience.
+     * 
+     * @param token_id the id of the token
+     */
     public static function revokeTokenByMS($token_id)
     {
         return BaseService::create("INSERT INTO access_tokens_revoked (token_id) VALUES (:token_id)", array("token_id"=>$token_id));

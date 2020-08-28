@@ -4,28 +4,28 @@
  * This software is provided on an "AS IS" BASIS,
  * without warranties or conditions of any kind, either express or implied.
  */
-require_once("baseService.php");
-require_once("userService.php");
-require_once("sessionService.php");
+require_once("authService.php");
 
 /**
  * The authorization services provides SSO-login functionality.
  * It uses the SessionService-class to create and delete sessions and tokens.
- * @see SessionService for login and logout interactions
+ * @see AuthService for login and logout interactions
+ * @see SessionService for session handling
+ * @see AccessTokenService for access code and access token generation
  *
- * Several methods of the AuthService require a $request_url. The $request_url is the url of the frontend, that
+ * Several methods of the AuthInterfaceService require a $request_url. The $request_url is the url of the frontend, that
  * is also registered in the config's CF_AUTH_CLIENTS array with its corresponding audience (backend) and
  * auth-url (where redirects go.)
  *
- * Every redirect to the auth-url contains the response_type field, which can be one of the following parameters:
- * - access_code: the url also contains a field "access_code" with an access code which can be exchanged for an access token
+ * Every redirect to the auth-url contains a response_type query field, which can be one of the following parameters:
+ * - access_code: the url also contains a query field "access_code" with an access code which can be exchanged for an access token
  * - login_required: the "silent" request for an access code failed and a normal login is required
  * - logout_successful: the logout action was successful
  * - logout_failed: the logout action failed
  *
  * @auth none
  */
-class AuthService
+class AuthInterfaceService
 {
     private static $RESPONSE_TYPE_FIELD = "response_type";
     private static $RESPONSE_TYPE_ACCESS_CODE = "access_code";
@@ -54,9 +54,9 @@ class AuthService
         
 
         // 2. check if the user is already logged in
-        if (!is_null(SessionService::getCurrentGuid())) {
+        if (AuthService::isLoggedIn()) {
             try {
-                $access_code = SessionService::createNewAccessCode($request_url, $audience);
+                $access_code = AuthService::createNewAccessCode($request_url, $audience);
                 self::writeRedirect("Login still active", $auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
             } catch (Exception $e) {
                 self::writeForm($request_url, $email, $e->getMessage());
@@ -99,16 +99,15 @@ class AuthService
             self::writeForm($request_url, $email, "Please provide your e-mail and your password to login!");
             exit();
         }
-        if (UserService::checkPassword($email, $password, true)) {
-            $user = UserService::get($email, true, true);
-            if (SessionService::create($user)) {
-                $access_code = SessionService::createNewAccessCode($request_url, $audience);
-                self::writeRedirect("Login successful", $auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
-            } else {
-                self::writeForm($request_url, $email, "There has been an internal error! Please try again later.");
-            }
-        } else {
-            self::writeForm($request_url, $email, "User does not exist or password is wrong!");
+
+        if (AuthService::login($email, $password))
+        {
+          $access_code = AuthService::createNewAccessCode($request_url, $audience);
+          self::writeRedirect("Login successful", $auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
+        }
+        else
+        {
+          self::writeForm($request_url, $email, "User does not exist or password is wrong!");
         }
         exit();
     }
@@ -126,14 +125,16 @@ class AuthService
     public static function onLogout($request_url="")
     {
         $request_info = self::checkRequestUrl($request_url);
-        $audience = $request_info[CF_AUTH_CLIENTS_AUDIENCE];
         $auth_url = $request_info[CF_AUTH_CLIENTS_AUTH_URL];
-      
-        $guid = SessionService::getCurrentGuid();
-        if (!is_null($guid)) {
-            SessionService::delete($guid);
+
+        if (AuthService::logout())
+        {
+          self::writeRedirect("Logout successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_SUCCESSFUL);
         }
-        self::writeRedirect("Logout successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_SUCCESSFUL);
+        else {
+          self::writeRedirect("Logout not successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_FAILED);
+        }
+        
         exit();
     }
 
@@ -147,7 +148,7 @@ class AuthService
      */
     public static function useAccessCode($access_code, $nonce)
     {
-        $token = SessionService::getAccessToken($access_code, $nonce);
+        $token = AuthService::getAccessToken($access_code, $nonce);
         return array("access_token"=>$token);
     }
 
@@ -160,7 +161,7 @@ class AuthService
      */
     public static function revokeToken($token_id)
     {
-        return AccessToken::revokeTokenByMS($token_id);
+        return AuthService::revokeToken($token_id);
     }
 
     /**
@@ -235,6 +236,7 @@ class AuthService
 
     public static function writeRedirect($title, $redirect_url, $response_type, $param=array())
     {
+      print_r($param);
         $param[self::$RESPONSE_TYPE_FIELD] = $response_type;
         $url = $redirect_url."?".http_build_query($param);
         self::writeHTMLStart(); ?> 

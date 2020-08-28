@@ -118,8 +118,8 @@ function base64url_decode($data)
     return base64_decode(strtr($data, '-_', '+/'), true);
 }
 
-// returns a random string with a length of 128
-function randomHashString()
+// returns a random string with a length max 128. 128 is the default length
+function randomHashString($length=128)
 {
     $tmpSalt = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     $salt = "";
@@ -127,7 +127,8 @@ function randomHashString()
         $rnd = rand(0, strlen($tmpSalt)-1);
         $salt .= substr($tmpSalt, $rnd, 1);
     }
-    return hash('sha512', $salt);
+    $hash = hash('sha512', $salt);
+    return $length === 128 ? $hash : substr($hash, 0, $length);
 }
 
 /**
@@ -241,6 +242,26 @@ function array_map_rec($arr, $map_fun, $params)
     return $newArray;
 }
 
+/**
+ * Applies a function to generate a new unique entry for a table
+ *
+ * @param prepared_query the query to check for duplicates. The query's result needs to have a field `count` and an argument ':value' to set the current value.
+ * @param fun the function that generates a unique entry. It will receive the number of trials (counter) as parameter.
+ *
+ * @return mixed the unique entry value
+ */
+function uniqueEntry($prepared_query, $fun)
+{
+    $entry_value = null;
+    $counter = 0;
+    do {
+        $entry_value = $fun($counter);
+        $result = DB::execute($prepared_query, array("value"=>$entry_value));
+        $counter++;
+    } while (intval($result["count"]) > 0);
+    return $entry_value;
+}
+
 
 /**
  * Generates a random string that does not occur in a database table's field.
@@ -250,15 +271,13 @@ function array_map_rec($arr, $map_fun, $params)
  *
  * @return random_string checked random string
  */
-function uniqueEntry($prepared_query, $random_string_length)
+function uniqueRandomString($prepared_query, $random_string_length)
 {
-    $random_string = "";
-    do {
-        $random_string = substr(randomHashString(), 0, $random_string_length);
-        $result = DB::execute($prepared_query, array("value"=>$random_string));
-    } while (intval($result["count"]) > 0);
-    return $random_string;
+    return uniqueEntry($prepared_query, function($counter) use ($random_string_length) {
+      return substr(randomHashString(), 0, $random_string_length);
+    });
 }
+
 
 /**
  * Combines values of an associative array into a URL-query (including ?)
