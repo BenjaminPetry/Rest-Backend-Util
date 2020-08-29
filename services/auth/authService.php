@@ -91,7 +91,13 @@ class AuthService
      */
     public static function createNewAccessCode($request_url, $audience)
     {
+        // 1. get current session
         $session_info = self::getSessionSafe();
+
+        // 2. update session expire date
+        SessionService::updateCurrent();
+
+        // 3. create access code
         return AccessTokenService::createAccessCode($session_info["ID"], $request_url, $audience);
     }
 
@@ -156,15 +162,12 @@ class AuthService
         $session_id = AccessTokenService::getSessionId($access_code);
         $session_info = self::getSessionSafe($session_id);
 
-        // 2. Update session expire date
-        SessionService::updateCurrent();
-
-        // 3. retrieve necessary information
+        // 2. retrieve necessary information
         $userId = intval($session_info["user"]);
         $userInfo = UserService::get($userId);
         $scope = UserService::getRoles($userId);
 
-        // 4. generate and return access token
+        // 3. generate and return access token
         return AccessTokenService::useAccessCode($access_code, $nonce, $session_info["guid"], $userInfo, $scope);
     }
 
