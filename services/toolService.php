@@ -55,8 +55,6 @@ class ToolService
     {
         if (CONFIG_ENABLE_TOOLS) {
             $password_pepper = hash_hmac("sha256", $password, PWD_PEPPER);
-            Log::log($password);
-            Log::log($password_pepper);
             return password_hash($password_pepper, PASSWORD_DEFAULT);
         }
         throw new RestException(405, "The URL is not valid.");

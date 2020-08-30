@@ -155,12 +155,8 @@ class UserService
      */
     public static function checkPassword($user, $password, $userIsEmail=false)
     {
-        Log::log("CHECK PASSWORD");
         $user = BaseService::get("SELECT `password` FROM users WHERE ".self::userWhere($user, $userIsEmail)." LIMIT 1;", array("user"=>$user));
         $password_pepper = hash_hmac("sha256", $password, PWD_PEPPER);
-        Log::log($password);
-        Log::log($password_pepper);
-        Log::log($user["password"]);
         return $user && password_verify($password_pepper, $user["password"]);// $comparePassword == $sha_password;
     }
 
