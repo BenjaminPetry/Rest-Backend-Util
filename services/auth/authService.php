@@ -33,9 +33,6 @@ class AuthService
         if (AUTH_MODE != AUTH_SERVER) {
             throw new RuntimeException("Illegal session configuration. This backend has no session login functionality.");
         }
-        Log::log("E-Mail: $email");
-        Log::log("Password: $password");
-
         // 1. remove existing sessions
         self::logout();
 

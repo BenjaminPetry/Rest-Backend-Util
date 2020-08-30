@@ -100,14 +100,11 @@ class AuthInterfaceService
             exit();
         }
 
-        if (AuthService::login($email, $password))
-        {
-          $access_code = AuthService::createNewAccessCode($request_url, $audience);
-          self::writeRedirect("Login successful", $auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
-        }
-        else
-        {
-          self::writeForm($request_url, $email, "User does not exist or password is wrong!");
+        if (AuthService::login($email, $password)) {
+            $access_code = AuthService::createNewAccessCode($request_url, $audience);
+            self::writeRedirect("Login successful", $auth_url, self::$RESPONSE_TYPE_ACCESS_CODE, array("access_code" => $access_code));
+        } else {
+            self::writeForm($request_url, $email, "User does not exist or password is wrong!");
         }
         exit();
     }
@@ -127,12 +124,10 @@ class AuthInterfaceService
         $request_info = self::checkRequestUrl($request_url);
         $auth_url = $request_info[CF_AUTH_CLIENTS_AUTH_URL];
 
-        if (AuthService::logout())
-        {
-          self::writeRedirect("Logout successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_SUCCESSFUL);
-        }
-        else {
-          self::writeRedirect("Logout not successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_FAILED);
+        if (AuthService::logout()) {
+            self::writeRedirect("Logout successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_SUCCESSFUL);
+        } else {
+            self::writeRedirect("Logout not successful", $auth_url, self::$RESPONSE_TYPE_LOGOUT_FAILED);
         }
         
         exit();
@@ -236,7 +231,6 @@ class AuthInterfaceService
 
     public static function writeRedirect($title, $redirect_url, $response_type, $param=array())
     {
-      print_r($param);
         $param[self::$RESPONSE_TYPE_FIELD] = $response_type;
         $url = $redirect_url."?".http_build_query($param);
         self::writeHTMLStart(); ?> 

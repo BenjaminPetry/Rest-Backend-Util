@@ -36,12 +36,12 @@ class ToolService
     /**
      * Generates a random 128-byte string
      *
-     * @url GET /tools/generate/randomstring
+     * @url GET /tools/generate/randomstring?length=$length
      */
-    public static function generateSecret()
+    public static function generateSecret($length=128)
     {
         if (CONFIG_ENABLE_TOOLS) {
-            return randomHashString();
+            return randomHashString($length);
         }
         throw new RestException(405, "The URL is not valid.");
     }
@@ -49,6 +49,7 @@ class ToolService
     /**
      * Hashes a password
      *
+     * @url GET /tools/hash-password?password=$password
      * @url POST /tools/hash-password password=$password
      */
     public static function hashPassword($password)
