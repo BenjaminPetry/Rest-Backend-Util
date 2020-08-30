@@ -11,6 +11,7 @@ global $config; // project and server configuration
 $config = array(
   CF_VERBOSE => false,
   CF_TEST => false,
+  CF_ERRORS_DISPLAY => false,
   CF_FORCE_RUN_LOCAL => false,
   CF_NAME => "Unknown Project",
   CF_CORS_ACCEPT_ORIGINS => "http://localhost:3000",
@@ -21,6 +22,7 @@ $config = array(
   CF_EMAIL_LOG_RECEIVER => null,
   CF_DB => array(),
   CF_SECRET => randomHashString(),
+  CF_PWD_PEPPER => randomHashString(),
   CF_ENABLE_TOOLS => true,
   CF_AUTH => AUTH_SERVER,
   CF_AUTH_SUPERADMIN => 1,
@@ -57,7 +59,9 @@ define("IS_LOCALHOST", $tmpServername == "localhost" || $tmpHost=="127.0.0.1" ||
 define('VERBOSE', isset($_SERVER["HTTP_VERBOSE"]) ? $_SERVER["HTTP_VERBOSE"] === "true" : $config[CF_VERBOSE]);
 define('TEST', isset($_SERVER["HTTP_TEST"]) ? $_SERVER["HTTP_TEST"] === "true" : $config[CF_TEST]);
 define("DISPLAY_ERRORS", $config[CF_ERRORS_DISPLAY]);
+
 define("SECRET", $config[CF_SECRET]);
+define("PWD_PEPPER", $config[CF_PWD_PEPPER]);
 
 define("PATH_CACHE", $config[CF_PATH_CACHE]);
 define("PATH_TMP", $config[CF_PATH_TMP]);

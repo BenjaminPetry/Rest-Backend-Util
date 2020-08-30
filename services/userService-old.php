@@ -132,7 +132,7 @@ class UserService
         if (!$adminChangesUsersPassword && !self::checkPassword($user, $password)) {
             throw new RestException(401, "Invalid password.");
         }
-        $sha_passwordSalt = self::encryptPassword($newPassword);
+        $sha_passwordSalt = password_hash($newPassword); //self::encryptPassword($newPassword);
         if (!BaseService::execute("UPDATE users SET `password` = :password WHERE ".self::userWhere($user), array("user"=>$user,"password" => $sha_passwordSalt))) {
             throw new RuntimeException("Could not change the password.");
         }

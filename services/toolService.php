@@ -40,9 +40,24 @@ class ToolService
      */
     public static function generateSecret()
     {
-        global $config;
         if (CONFIG_ENABLE_TOOLS) {
             return randomHashString();
+        }
+        throw new RestException(405, "The URL is not valid.");
+    }
+
+    /**
+     * Hashes a password
+     *
+     * @url POST /tools/hash-password password=$password
+     */
+    public static function hashPassword($password)
+    {
+        if (CONFIG_ENABLE_TOOLS) {
+            $password_pepper = hash_hmac("sha256", $password, PWD_PEPPER);
+            Log::log($password);
+            Log::log($password_pepper);
+            return password_hash($password_pepper, PASSWORD_DEFAULT);
         }
         throw new RestException(405, "The URL is not valid.");
     }

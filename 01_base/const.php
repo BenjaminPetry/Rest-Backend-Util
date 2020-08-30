@@ -57,8 +57,11 @@ define("CF_DB_NAME", "db-name");
 
 define("CF_SECRET", "secret");
 define("CF_PERMISSIONS", "permissions");
+define("CF_PWD_PEPPER", "pwd-pepper");
 
 define("CF_ENABLE_TOOLS", "enable-tools");
+
+
 
 define("CF_AUTH", "auth-method");
 define("CF_AUTH_SUPERADMIN", "auth-superadmin");

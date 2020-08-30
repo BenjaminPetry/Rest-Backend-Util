@@ -33,13 +33,15 @@ class AuthService
         if (AUTH_MODE != AUTH_SERVER) {
             throw new RuntimeException("Illegal session configuration. This backend has no session login functionality.");
         }
+        Log::log("E-Mail: $email");
+        Log::log("Password: $password");
 
         // 1. remove existing sessions
         self::logout();
 
         // 2. check the password
         if (!UserService::checkPassword($email, $password, true)) {
-          return false;
+            return false;
         }
 
         // 3. retrieve the user's ID
@@ -47,9 +49,8 @@ class AuthService
         
         // 4. create session entry
         $guid = SessionService::create($userInfo["ID"], true, $session_name);
-        if (is_null($guid))
-        {
-          throw new RuntimeException("Could not create session!");
+        if (is_null($guid)) {
+            throw new RuntimeException("Could not create session!");
         }
 
         // 5. set new session as current session
@@ -62,23 +63,22 @@ class AuthService
      */
     public static function logout()
     {
-      $currentSession = SessionService::getCurrent();
-      if (!is_null($currentSession))
-      {
-        SessionService::setCurrent(null);
-        return self::invalidateSession($currentSession["guid"]);
-      }
-      return true;
+        $currentSession = SessionService::getCurrent();
+        if (!is_null($currentSession)) {
+            SessionService::setCurrent(null);
+            return self::invalidateSession($currentSession["guid"]);
+        }
+        return true;
     }
 
     /**
      * Checks if there is currently a session present
-     * 
+     *
      * @return bool true if a session is present, false otherwise
      */
     public static function isLoggedIn()
     {
-      return !is_null(SessionService::getCurrent());
+        return !is_null(SessionService::getCurrent());
     }
 
     /**
@@ -103,7 +103,7 @@ class AuthService
 
     /**
      * Revokes an access token
-     * 
+     *
      * @param token_id ID of the token
      */
     public static function revokeAccessToken($token_id)

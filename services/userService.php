@@ -150,23 +150,24 @@ class UserService
      *
      * @param   user      id of the user (must be numeric) otherwise it will be treated as username or, if specified, as email
      * @param   password  the password of the user
+     *
+     * @return bool true if the password is correct
      */
     public static function checkPassword($user, $password, $userIsEmail=false)
     {
+        Log::log("CHECK PASSWORD");
         $user = BaseService::get("SELECT `password` FROM users WHERE ".self::userWhere($user, $userIsEmail)." LIMIT 1;", array("user"=>$user));
-        $checkPassword = $user["password"];
-        $sha_password = substr($checkPassword, 0, 128);
-        $sha_salt = substr($checkPassword, 128);
-        $comparePassword = hash('sha512', $password.$sha_salt);
-        return $comparePassword == $sha_password;
+        $password_pepper = hash_hmac("sha256", $password, PWD_PEPPER);
+        Log::log($password);
+        Log::log($password_pepper);
+        Log::log($user["password"]);
+        return $user && password_verify($password_pepper, $user["password"]);// $comparePassword == $sha_password;
     }
-
 
     private static function encryptPassword($password)
     {
-        $sha_salt = randomHashString();
-        $sha_password = hash('sha512', $password.$sha_salt);
-        return $sha_password.$sha_salt;
+        $password_pepper = hash_hmac("sha256", $password, PWD_PEPPER);
+        return password_hash($password_pepper, PASSWORD_DEFAULT);
     }
 
 
