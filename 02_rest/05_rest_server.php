@@ -103,7 +103,7 @@ class RestServer
                 }
             }
             if (count($missingFields) > 0) {
-                throw new MissingFieldsException("The field/s '". join(", ", $missingFields)."' must be provided as part of the body of a non-GET request.");
+                throw new MissingFieldsException("The field(s) '". join(", ", $missingFields)."' must be provided as part of the body of a non-GET request.");
             }
 
 
