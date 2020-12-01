@@ -67,6 +67,10 @@ class Request
     }
     public static function body($field)
     {
-        return self::bodyFieldExists($field) ? filter_var(self::$bodyParams[$field]) : null;
+        if (!self::bodyFieldExists($field)) {
+            return null;
+        }
+        $value = self::$bodyParams[$field];
+        return is_array($value) ? filter_var_array($value) : filter_var($value);
     }
 }
