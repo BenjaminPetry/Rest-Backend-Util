@@ -37,7 +37,7 @@ if (!is_null(DATABASE_CONFIG)) {
     Log::debug("** INIT Database **");
     $dbConfig = $config[CF_DB][DATABASE_CONFIG];
     DB::Init(new PDO(
-        "mysql:dbname=".$dbConfig[CF_DB_NAME].";host=".$dbConfig[CF_DB_HOST],
+        "mysql:dbname=".$dbConfig[CF_DB_NAME].";host=".$dbConfig[CF_DB_HOST].";charset=utf8",
         $dbConfig[CF_DB_USER],
         $dbConfig[CF_DB_PASSWORD]
     ));
